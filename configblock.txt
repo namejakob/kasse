@@ -4,4 +4,4 @@ APPS_SCRIPT_URL: "https://script.google.com/macros/s/AKfycbxnoQ9R_0lZdaKY8yFwsTQ
   KONTOINHABER:    "Jakob Gross",                    // EPC: keine Umlaute nötig, max 70 Zeichen
   BIC:             "DEFFDEFFXXX",
   // Feste Mannschaftsliste – verhindert Tippfehler und doppelte Zähler.
-  SPIELER: ["Jakob G","Tim","Tyler","Sandro","Elvis","Jonathan","Samu","Lennart","Florian","Pascal","Jakob V", "Benni", "Phummin"],
+  SPIELER: ["Jakob G","Tim","Tyler","Sandro","Elvis","Jonathan","Samu","Lennart","Florian","Pascal","Jakob V", "Benni", "Phummin", "Muk", "Anton", "Pepe"],

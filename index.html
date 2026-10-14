@@ -250,6 +250,8 @@ footer button{background:none;border:none;color:var(--ink-dim);font-size:.75rem;
     <button class="close" onclick="closePay()" aria-label="Schließen">✕</button>
     <h3 class="display">STRAFE ZAHLEN</h3>
     <p class="hint">Wähle deinen Zahlungsweg.</p>
+    <label>Wer zahlt?</label>
+    <select id="payName" onchange="payNameChanged()"></select>
     <div class="pay-options">
       <button class="btn btn-blau" onclick="showQR('paypal')">💙 Per PayPal zahlen</button>
       <button class="btn btn-ghost" onclick="showQR('bank')">🏦 Banküberweisung per QR-Code</button>
@@ -259,6 +261,7 @@ footer button{background:none;border:none;color:var(--ink-dim);font-size:.75rem;
       <p style="text-align:center;font-size:.85rem;color:var(--ink-dim);margin-top:10px">
         QR scannen oder öffnen: <a id="ppLink" href="#" style="color:var(--blau)" target="_blank" rel="noopener"></a>
       </p>
+      <p id="ppHinweis" style="text-align:center;font-size:.85rem;margin-top:8px"></p>
     </div>
     <div class="qr-wrap" id="qrBank">
       <label style="margin-top:14px">Betrag in €</label>
@@ -282,7 +285,7 @@ const CONFIG = {
   KONTOINHABER:    "Jakob Gross",                    // EPC: keine Umlaute nötig, max 70 Zeichen
   BIC:             "DEFFDEFFXXX",
   // Feste Mannschaftsliste – verhindert Tippfehler und doppelte Zähler.
-  SPIELER: ["Jakob G","Tim","Tyler","Sandro","Elvis","Jonathan","Samu","Lennart","Florian","Pascal","Jakob V", "Benni", "Phummin", "Muk", "Anton", "Pepe"],
+  SPIELER: ["Jakob G","Tim","Tyler","Sandro","Elvis","Jonathan","Samu","Lennart","Florian","Pascal","Jakob V", "Benni", "Phummin", "Muk", "Anton", "Pepe", "Erik", "Frank"],
 };
 /* ═══════════════════════════════════════════════════ */
 
@@ -375,10 +378,13 @@ function render(){
     </div>`).join("");
 
   // Spieler-Dropdown
-  if(!$("fName").options.length){
-    $("fName").innerHTML = `<option value="">– Spieler wählen –</option>` +
-      CONFIG.SPIELER.map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join("");
-  }
+  ["fName","payName"].forEach(function(id){
+    const el = $(id);
+    if(el && !el.options.length){
+      el.innerHTML = `<option value="">– Spieler wählen –</option>` +
+        CONFIG.SPIELER.map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join("");
+    }
+  });
   if(state.admin) preview();
 }
 
@@ -489,13 +495,30 @@ function showQR(which){
     $("ppLink").textContent = CONFIG.PAYPAL_ME.replace("https://","");
     $("ppLink").href = CONFIG.PAYPAL_ME;
   }
+  if(which==="paypal") ppHinweisSetzen();
   if(which==="bank") buildGiro();
+}
+/* Verwendungszweck: mit Namen ist die Zahlung auf dem Kontoauszug eindeutig
+   einem Spieler zuzuordnen - Voraussetzung fuers spaetere Auto-Verbuchen. */
+function zweck(){
+  const n = $("payName") ? $("payName").value.trim() : "";
+  return n ? "Kasse " + n : "Mannschaftskasse";
+}
+function payNameChanged(){
+  if($("qrBank").classList.contains("open")) buildGiro();
+  if($("qrPaypal").classList.contains("open")) ppHinweisSetzen();
+}
+function ppHinweisSetzen(){
+  const n = $("payName") ? $("payName").value.trim() : "";
+  $("ppHinweis").innerHTML = n
+    ? `Bitte als Nachricht angeben: <b>${esc(zweck())}</b>`
+    : `<span style="color:var(--ink-dim)">Tipp: oben den Namen wählen - dann wird die Zahlung automatisch zugeordnet.</span>`;
 }
 function buildGiro(){
   const betrag = parseFloat($("bankBetrag").value);
   const payload = ["BCD","002","1","SCT", CONFIG.BIC, CONFIG.KONTOINHABER,
     CONFIG.IBAN.replace(/\s/g,""), betrag>0 ? "EUR"+betrag.toFixed(2) : "", "", "",
-    "Mannschaftskasse"].join("\n");
+    zweck()].join("\n");
   $("qrBankBox").innerHTML = "";
   new QRCode($("qrBankBox"), {text: payload, width:200, height:200, correctLevel: QRCode.CorrectLevel.M});
 }

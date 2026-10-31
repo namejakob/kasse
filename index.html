@@ -46,6 +46,7 @@ main{max-width:520px;margin:0 auto;padding:18px 16px 0}
   text-shadow:0 0 24px rgba(255,196,0,.25);
 }
 .scoreboard .sub2{font-size:.8rem;color:var(--ink-dim);margin-top:6px}
+.scoreboard .amount.laedt{opacity:.5;transition:opacity .25s}
 .scoreboard .sub2 b{color:var(--rot)}
 
 section{margin-top:26px}
@@ -317,24 +318,45 @@ function kurzDatum(v){
 }
 
 /* ───────── Daten ───────── */
+/* Apps Script braucht 2-4 s. Damit die Zahl nicht so lange auf "–" steht,
+   wird der letzte bekannte Stand sofort angezeigt und still ersetzt. */
+const STAND_KEY = "kasseStand";
+function standLesen(){ try{ return JSON.parse(localStorage.getItem(STAND_KEY)); }catch(e){ return null; } }
+function standSchreiben(o){ try{ localStorage.setItem(STAND_KEY, JSON.stringify(o)); }catch(e){} }
+
 async function loadData(){
   if(!CONFIG.APPS_SCRIPT_URL){
     $("demoBanner").style.display = "block";
     Object.assign(state, DEMO);
     render(); return;
   }
+  const alt = standLesen();
+  if(alt){
+    const {zeit, ...rest} = alt;
+    Object.assign(state, rest); render();
+    $("balance").classList.add("laedt");
+  }
   try{
     const res = await fetch(CONFIG.APPS_SCRIPT_URL);
     const d = await res.json();
     if(!d.ok) return toast("⚠ " + (d.error || "Fehler beim Laden"));
-    Object.assign(state, {
+    const frisch = {
       kassenstand:d.kassenstand, offen:d.offen, unverbucht:d.unverbucht,
       spieler:d.spieler||[], ausgaben:d.ausgaben||[]
-    });
+    };
+    Object.assign(state, frisch);
+    standSchreiben(Object.assign({zeit:Date.now()}, frisch));
     render();
   }catch(e){
-    $("playerList").innerHTML = `<div class="empty">Keine Verbindung zum Sheet.<br>Später nochmal versuchen.</div>`;
-    toast("⚠ Verbindung fehlgeschlagen");
+    if(alt){
+      const t = new Date(alt.zeit).toLocaleString("de-DE",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"});
+      toast("⚠ Offline – Stand von " + t);
+    }else{
+      $("playerList").innerHTML = `<div class="empty">Keine Verbindung zum Sheet.<br>Später nochmal versuchen.</div>`;
+      toast("⚠ Verbindung fehlgeschlagen");
+    }
+  }finally{
+    $("balance").classList.remove("laedt");
   }
 }
 
